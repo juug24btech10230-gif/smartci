@@ -1,0 +1,55 @@
+name: Smart CI
+on: [push, pull_request]
+jobs:
+  smart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Topic 1: smart cache invalidation (key follows module contents + deps)
+      - name: Compute smart cache key
+        id: keys
+        run: python scripts/smart_cache.py --github-output
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            .pytest_cache
+          key: smartci-${{ runner.os }}-${{ steps.keys.outputs.build_key }}
+          restore-keys: |
+            smartci-${{ runner.os }}-
+      - run: pip install -r requirements.txt scikit-learn pandas
+
+      # Topic 4: failure-risk prediction before running anything
+      - name: Predict build failure risk
+        run: |
+          python ml/train.py > /dev/null
+          python ml/predict.py --base "${{ github.event.before || 'HEAD~1' }}" || true
+
+      # Topic 2: run only the tests the change can affect
+      - name: Select tests
+        id: select
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            TESTS="tests"
+          else
+            TESTS=$(python scripts/select_tests.py --base "$BASE" --head HEAD || echo tests)
+          fi
+          echo "tests=${TESTS:-tests}" >> "$GITHUB_OUTPUT"
+      - name: Run selected tests
+        run: |
+          set -o pipefail
+          pytest -v ${{ steps.select.outputs.tests }} 2>&1 | tee build.log
+
+      # Topic 3: summarize the log (LLM if secret present, rules otherwise)
+      - name: Summarize build log
+        if: always()
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/summarize_log.py build.log
