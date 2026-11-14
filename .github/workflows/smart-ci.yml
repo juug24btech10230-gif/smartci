@@ -14,17 +14,20 @@ jobs:
       # Cache invalidation: key follows module contents plus their dependencies
       - name: Compute smart cache key
         id: keys
-        run: |
-          python scripts/smart_cache.py --github-output | tee keys.txt
-          echo "::notice title=Smart cache keys::$(tr '\n' ';' < keys.txt)"
+        run: python scripts/smart_cache.py --github-output > /dev/null
       - uses: actions/cache@v4
+        id: cache
         with:
           path: |
             ~/.cache/pip
-            .pytest_cache
+            .smartci-cache
           key: smartci-${{ runner.os }}-${{ steps.keys.outputs.build_key }}
           restore-keys: |
             smartci-${{ runner.os }}-
+      - name: Report cache status and invalidated modules
+        run: |
+          python scripts/smart_cache.py --write | tee keys.txt
+          echo "::notice title=Smart cache::exact-hit=${{ steps.cache.outputs.cache-hit || 'false' }}; $(tr '\n' ';' < keys.txt)"
       - run: pip install -r requirements.txt scikit-learn pandas
 
       # Failure-risk prediction before running anything
