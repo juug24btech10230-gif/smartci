@@ -9,5 +9,5 @@ def add_tax(price, rate=0.18):
 
 
 def bulk_discount(price, qty):
-    rate = 10 if qty > 10 else 0
+    rate = 10 if qty >= 10 else 0
     return apply_discount(price * qty, rate)
