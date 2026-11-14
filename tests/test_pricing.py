@@ -1,5 +1,5 @@
 import pytest
-from src.pricing import apply_discount, add_tax
+from src.pricing import apply_discount, add_tax, bulk_discount
 
 
 def test_discount_basic():
@@ -18,3 +18,8 @@ def test_discount_invalid():
 
 def test_tax_default():
     assert add_tax(100) == 118.0
+
+
+def test_bulk_discount_threshold():
+    assert bulk_discount(10, 10) == 90.0
+    assert bulk_discount(10, 5) == 50.0
