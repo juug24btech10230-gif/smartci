@@ -3,3 +3,7 @@ __pycache__/
 .pytest_cache/
 build.log
 .smartci-cache/
+keys.txt
+risk.txt
+why.txt
+summary.txt
