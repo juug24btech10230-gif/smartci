@@ -21,3 +21,10 @@ def test_remove_too_much_raises():
     inv.add_stock('pen', 1)
     with pytest.raises(ValueError):
         inv.remove_stock('pen', 2)
+
+
+def test_available_reports_stock():
+    inv = Inventory()
+    inv.add_stock('pen', 4)
+    assert inv.available('pen') == 4
+    assert inv.available('ink') == 0
